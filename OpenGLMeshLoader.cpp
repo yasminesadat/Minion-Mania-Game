@@ -1,11 +1,10 @@
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
 #include "GLTexture.h"
-#ifndef GLUT_H
-#define GLUT_H
 #include <glut.h>
-#endif
-#include <cmath>
+#include <vector>
+#include <cstdlib> 
+#include <ctime>   
 
 int WIDTH = 1280;
 int HEIGHT = 720;
@@ -18,6 +17,28 @@ GLdouble fovy = 45.0;
 GLdouble aspectRatio = (GLdouble)WIDTH / (GLdouble)HEIGHT;
 GLdouble zNear = 0.1;
 GLdouble zFar = 500;
+float xPositions[] = {0.6f, 1.6f, 2.4f, 3.3f, 4.1f, 5.0f }; 
+int xCount = 6;
+float minionX = 2.4f;      
+int LaneIndex = 2; 
+
+struct Banana {
+	float x, y, z;
+};
+std::vector<Banana> bananas;
+
+void SpawnBananas(int count) {
+	bananas.clear(); 
+	float y = 11.0f; 
+	float zStart = 55.0f; 
+
+	for (int i = 0; i < count; ++i) {
+		float x = xPositions[rand() % xCount]; 
+		float z = zStart - i * 10.0f;          
+		bananas.push_back({ x, y, z });
+	}
+}
+
 
 class Vector
 {
@@ -37,7 +58,7 @@ public:
 	}
 };
 
-Vector Eye(3, 12, 65);
+Vector Eye(2.5, 12, 64);
 Vector At(0, 0, 0);
 Vector Up(0, 1, 0);
 
@@ -49,25 +70,19 @@ Model_3DS model_finishLine;
 Model_3DS model_bridge;
 Model_3DS model_banana;
 Model_3DS model_sandbags;
-
 // Textures
 GLTexture tex_ground;
 
-//Minion Variables
 bool isThirdPerson = true;
-float minionPositionZ = 60.0f; 
-float minionPositionY = 10.2f;
-
-//Banana Variables
+float bridgePositionZ = 0.0f;
+float bridgeSpeed = 0.006f;
 float bananaPositionZ = 0.0f;
 
-//Bridge Variables
-float bridgePositionZ = -10.0f;
 
-//Timer Variables
-float timer1 = 20;
 
+//=======================================================================
 // Lighting Configuration Function
+//=======================================================================
 void InitLightSource()
 {
 	// Enable Lighting for this OpenGL Program
@@ -94,7 +109,9 @@ void InitLightSource()
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 }
 
+//=======================================================================
 // Material Configuration Function
+//======================================================================
 void InitMaterial()
 {
 	// Enable Material Tracking
@@ -113,7 +130,51 @@ void InitMaterial()
 	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
 }
 
-// =================================  RENDERS  ================================= //
+//=======================================================================
+// OpengGL Configuration Function
+//=======================================================================
+void myInit(void)
+{
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+
+	glMatrixMode(GL_PROJECTION);
+
+	glLoadIdentity();
+
+	gluPerspective(fovy, aspectRatio, zNear, zFar);
+	//*//
+	// fovy:			Angle between the bottom and top of the projectors, in degrees.			 //
+	// aspectRatio:		Ratio of width to height of the clipping plane.							 //
+	// zNear and zFar:	Specify the front and back clipping planes distances from camera.		 //
+	//*//
+
+	glMatrixMode(GL_MODELVIEW);
+
+	glLoadIdentity();
+
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+	//*//
+	// EYE (ex, ey, ez): defines the location of the camera.									 //
+	// AT (ax, ay, az):	 denotes the direction where the camera is aiming at.					 //
+	// UP (ux, uy, uz):  denotes the upward orientation of the camera.							 //
+	//*//
+
+	InitLightSource();
+
+	InitMaterial();
+	
+	srand(static_cast<unsigned>(time(0)));
+	SpawnBananas(10); 
+	
+
+	glEnable(GL_DEPTH_TEST);
+
+	glEnable(GL_NORMALIZE);
+}
+
+//=======================================================================
+// Render Ground Function
+//=======================================================================
 void RenderGround()
 {
 	glDisable(GL_LIGHTING);	// Disable lighting 
@@ -143,24 +204,13 @@ void RenderGround()
 	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
 }
 
-void CalculateMinionPosition() {
-    float bridgeHeight = 11.30f; 
-    float bridgeLength = 100.0f; 
-    float relativePosition = (minionPositionZ - bridgePositionZ) / bridgeLength;
-    minionPositionY = bridgeHeight * sin(relativePosition * 3.14159f); 
-	minionPositionZ -= 0.0006;
-}
-
-void RenderMinion() {
-   
-    CalculateMinionPosition();
-
-    glPushMatrix();
-	glTranslatef(3.0, minionPositionY, minionPositionZ);
-    glScalef(0.20, 0.20, 0.20);
-    glRotatef(180, 0, 1, 0);
-    model_minion.Draw();
-    glPopMatrix();
+void RenderPlayer() {
+	glPushMatrix();
+	glTranslatef(minionX, 11.0, 60.0);
+	glScalef(0.20, 0.20, 0.20);
+	glRotatef(180, 0, 1, 0);
+	model_minion.Draw();
+	glPopMatrix();
 }
 
 void RenderSky() {
@@ -183,20 +233,23 @@ void RenderSky() {
 
 void RenderBridge() {
 	glPushMatrix();
-	glTranslatef(70.0f, 0.0f, bridgePositionZ);
+	glTranslatef(70.0f, 0.0f, bridgePositionZ - 10.0f);
 	glScalef(4.0f, 4.0f, 4.0f);
 	glRotatef(90, 0, 1, 0);
 	model_bridge.Draw();
 	glPopMatrix();
 }
 
-void RenderBanana() {
-	glPushMatrix();
-	glTranslatef(3.0f, 11.0f, bananaPositionZ - 10.0f);
-	glRotatef(90, 0, 1, 0);
-	glScalef(1.0f, 1.0f, 1.0f);
-	model_banana.Draw();
-	glPopMatrix();
+
+void RenderBananas() {
+	for (const auto& banana : bananas) {
+		glPushMatrix();
+		glTranslatef(banana.x, banana.y, banana.z);
+		glRotatef(90, 0, 1, 0);
+		glScalef(0.3f, 0.3f, 0.3f);
+		model_banana.Draw();
+		glPopMatrix();
+	}
 }
 
 void RenderSandbags() {
@@ -208,28 +261,17 @@ void RenderSandbags() {
 	glPopMatrix();
 }
 
-void RenderTimer() {
-    glPushMatrix();
-    glLoadIdentity();
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    gluOrtho2D(0, WIDTH, 0, HEIGHT);
-    glMatrixMode(GL_MODELVIEW);
-    glColor3f(0.0f, 0.0f, 0.0f); // Set the text color to black
-    glRasterPos2i(1150, HEIGHT - 25); // Position the text
-    char timerText[50];
-    sprintf_s(timerText, "Time: %.1f s", timer1);
-    for (char* c = timerText; *c != '\0'; c++) {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
-    }
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
+void UpdatePositions() {
+	bridgePositionZ += bridgeSpeed;
+	if (bridgePositionZ < -50.0f) {
+		bridgePositionZ = 0.0f;
+	}
 }
 
+
+//=======================================================================
 // Display Function
+//=======================================================================
 void Display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -246,46 +288,76 @@ void Display(void)
 
 	// Render the scene
 	RenderGround();
-	RenderMinion();
+	RenderPlayer();
 	RenderSky();
 	RenderBridge();
-	RenderBanana();
-	RenderTimer();
+	RenderBananas();
+	UpdatePositions();
+
 
 	glutSwapBuffers();
 }
+void Idle() {
+    for (auto& banana : bananas) {
+        banana.z += 0.005f;
+    }
+    glutPostRedisplay();
+}
 
-// Keyboard Function
-void Keyboard(unsigned char button, int x, int y)
-{
-	switch (button)
-	{
-	case 27: //esc
-		exit(0);
-		break;
-
-	case 'w': //toggle view perspectives
-		isThirdPerson = !isThirdPerson;
-
-		if (isThirdPerson) {
-			Eye = Vector(3, 12, 50);
-			At = Vector(0, 0, 0);
-		}
-		else {
-			Eye = Vector(3, 12, 45);
-			At = Vector(0, 2, -10); // look forward
-		}
-		break;
-
-	default:
-		break;
+void UpdateCamera() {
+	if (isThirdPerson) {
+		Eye = Vector(minionX, 12, 64);
+		At = Vector(0, 0, 0);
+	}
+	else {
+		Eye = Vector(minionX, 12, 45);
+		At = Vector(0, 2, -10);
 	}
 
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
 
+
+//=======================================================================
+// Keyboard Function
+//=======================================================================
+void Keyboard(unsigned char button, int x, int y) {
+	switch (button) {
+	case 27: // Escape
+		exit(0);
+		break;
+
+	case 'w': // Toggle third-person view
+		isThirdPerson = !isThirdPerson;
+		UpdateCamera();
+		break;
+
+	case 'a': 
+		if (LaneIndex > 0) {
+			LaneIndex--;
+			minionX = xPositions[LaneIndex];
+		}
+		break;
+
+	case 'd': 
+		if (LaneIndex < xCount - 1) {
+			LaneIndex++;
+			minionX = xPositions[LaneIndex];
+		}
+		break;
+
+	default:
+		break;
+	}
+	glutPostRedisplay();
+}
+
+
+
+//=======================================================================
 // Motion Function
+//=======================================================================
 void Motion(int x, int y)
 {
 	y = HEIGHT - y;
@@ -310,9 +382,12 @@ void Motion(int x, int y)
 	GLfloat light_position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
+	glutPostRedisplay();	//Re-draw scene 
 }
 
+//=======================================================================
 // Mouse Function
+//=======================================================================
 void Mouse(int button, int state, int x, int y)
 {
 	y = HEIGHT - y;
@@ -323,7 +398,9 @@ void Mouse(int button, int state, int x, int y)
 	}
 }
 
+//=======================================================================
 // Reshape Function
+//=======================================================================
 void Reshape(int w, int h)
 {
 	if (h == 0) {
@@ -347,7 +424,9 @@ void Reshape(int w, int h)
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
 
+//=======================================================================
 // Assets Loading Function
+//=======================================================================
 void LoadAssets()
 {
 	// Loading Model files
@@ -355,7 +434,7 @@ void LoadAssets()
 	model_finishLine.Load("Models/gate/gate.3ds");
 	model_bridge.Load("Models/bridge/bridge.3ds");
 	model_banana.Load("Models/banana/banana.3ds");
-	model_sandbags.Load("Models/sandbags/sandbags.3ds");
+	//model_sandbags.Load("Models/sandbags/sandbags.3ds");
 
 	// Loading texture files
 	tex_ground.Load("Textures/ground.bmp");
@@ -363,60 +442,9 @@ void LoadAssets()
 
 }
 
-// OpengGL Configuration Function
-void init(void)
-{
-	LoadAssets();
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_NORMALIZE);
-	glEnable(GL_COLOR_MATERIAL);
-
-	glShadeModel(GL_SMOOTH);
-
-	glClearColor(0.0, 0.0, 0.0, 0.0);
-
-	glMatrixMode(GL_PROJECTION);
-
-	glLoadIdentity();
-
-	gluPerspective(fovy, aspectRatio, zNear, zFar);
-	//*//
-	// fovy:			Angle between the bottom and top of the projectors, in degrees.			 //
-	// aspectRatio:		Ratio of width to height of the clipping plane.							 //
-	// zNear and zFar:	Specify the front and back clipping planes distances from camera.		 //
-	//*//
-
-	glMatrixMode(GL_MODELVIEW);
-
-	glLoadIdentity();
-
-	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
-	//*//
-	// EYE (ex, ey, ez): defines the location of the camera.									 //
-	// AT (ax, ay, az):	 denotes the direction where the camera is aiming at.					 //
-	// UP (ux, uy, uz):  denotes the upward orientation of the camera.							 //
-	//*//
-
-	InitLightSource();
-
-	InitMaterial();
-
-	glEnable(GL_DEPTH_TEST);
-
-	glEnable(GL_NORMALIZE);
-}
-
-void TimerCallback(int value) {
-    if (timer1 > 0.0f) {
-        timer1-= 0.1f; // Decrease the remaining time by 0.1 seconds
-        glutPostRedisplay(); // Request a redraw
-        glutTimerFunc(100, TimerCallback, 0); // Call this function again in 100 ms
-    }
-}
-
+//=======================================================================
 // Main Function
+//=======================================================================
 void main(int argc, char** argv)
 {
 	glutInit(&argc, argv);
@@ -434,12 +462,17 @@ void main(int argc, char** argv)
 	glutMotionFunc(Motion);
 	glutMouseFunc(Mouse);
 	glutReshapeFunc(Reshape);
-	glutIdleFunc(Display);
+	glutIdleFunc(Idle);
 
-	init();
+	myInit();
+	LoadAssets();
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_COLOR_MATERIAL);
 
-    // Start the timer for 20 seconds
-    glutTimerFunc(100, TimerCallback, 0);
+	glShadeModel(GL_SMOOTH);
 
 	glutMainLoop();
 }
