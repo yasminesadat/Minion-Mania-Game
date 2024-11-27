@@ -58,12 +58,14 @@ bool isThirdPerson = true;
 float minionPositionZ = 60.0f; 
 float minionPositionY = 10.2f;
 
-
 //Banana Variables
 float bananaPositionZ = 0.0f;
 
 //Bridge Variables
 float bridgePositionZ = -10.0f;
+
+//Timer Variables
+float timer1 = 20;
 
 // Lighting Configuration Function
 void InitLightSource()
@@ -142,10 +144,11 @@ void RenderGround()
 }
 
 void CalculateMinionPosition() {
-    float bridgeHeight = 13.0f; // Example height of the bridge
-    float bridgeLength = 200.0f; // Example length of the bridge
+    float bridgeHeight = 11.30f; 
+    float bridgeLength = 100.0f; 
     float relativePosition = (minionPositionZ - bridgePositionZ) / bridgeLength;
-    //minionPositionY = bridgeHeight * sin(relativePosition * 3.14159f); 
+    minionPositionY = bridgeHeight * sin(relativePosition * 3.14159f); 
+	minionPositionZ -= 0.0006;
 }
 
 void RenderMinion() {
@@ -205,9 +208,28 @@ void RenderSandbags() {
 	glPopMatrix();
 }
 
-//=======================================================================
+void RenderTimer() {
+    glPushMatrix();
+    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, WIDTH, 0, HEIGHT);
+    glMatrixMode(GL_MODELVIEW);
+    glColor3f(0.0f, 0.0f, 0.0f); // Set the text color to black
+    glRasterPos2i(1150, HEIGHT - 25); // Position the text
+    char timerText[50];
+    sprintf_s(timerText, "Time: %.1f s", timer1);
+    for (char* c = timerText; *c != '\0'; c++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+    }
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+}
+
 // Display Function
-//=======================================================================
 void Display(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -228,6 +250,7 @@ void Display(void)
 	RenderSky();
 	RenderBridge();
 	RenderBanana();
+	RenderTimer();
 
 	glutSwapBuffers();
 }
@@ -385,6 +408,14 @@ void init(void)
 	glEnable(GL_NORMALIZE);
 }
 
+void TimerCallback(int value) {
+    if (timer1 > 0.0f) {
+        timer1-= 0.1f; // Decrease the remaining time by 0.1 seconds
+        glutPostRedisplay(); // Request a redraw
+        glutTimerFunc(100, TimerCallback, 0); // Call this function again in 100 ms
+    }
+}
+
 // Main Function
 void main(int argc, char** argv)
 {
@@ -407,8 +438,8 @@ void main(int argc, char** argv)
 
 	init();
 
-	// Start the timer for 2 minutes 
-    //glutTimerFunc(16, TimerCallback, 120000 / 16);
+    // Start the timer for 20 seconds
+    glutTimerFunc(100, TimerCallback, 0);
 
 	glutMainLoop();
 }
