@@ -1,7 +1,11 @@
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
 #include "GLTexture.h"
+#ifndef GLUT_H
+#define GLUT_H
 #include <glut.h>
+#endif
+#include <cmath>
 
 int WIDTH = 1280;
 int HEIGHT = 720;
@@ -33,7 +37,7 @@ public:
 	}
 };
 
-Vector Eye(3, 12, 64);
+Vector Eye(3, 12, 65);
 Vector At(0, 0, 0);
 Vector Up(0, 1, 0);
 
@@ -45,18 +49,23 @@ Model_3DS model_finishLine;
 Model_3DS model_bridge;
 Model_3DS model_banana;
 Model_3DS model_sandbags;
+
 // Textures
 GLTexture tex_ground;
 
+//Minion Variables
 bool isThirdPerson = true;
-float bridgePositionZ = 0.0f;
-float bridgeSpeed = 0.001f;
+float minionPositionZ = 60.0f; 
+float minionPositionY = 10.2f;
+
+
+//Banana Variables
 float bananaPositionZ = 0.0f;
 
+//Bridge Variables
+float bridgePositionZ = -10.0f;
 
-//=======================================================================
 // Lighting Configuration Function
-//=======================================================================
 void InitLightSource()
 {
 	// Enable Lighting for this OpenGL Program
@@ -83,9 +92,7 @@ void InitLightSource()
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 }
 
-//=======================================================================
 // Material Configuration Function
-//======================================================================
 void InitMaterial()
 {
 	// Enable Material Tracking
@@ -104,11 +111,247 @@ void InitMaterial()
 	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
 }
 
-//=======================================================================
-// OpengGL Configuration Function
-//=======================================================================
-void myInit(void)
+// =================================  RENDERS  ================================= //
+void RenderGround()
 {
+	glDisable(GL_LIGHTING);	// Disable lighting 
+
+	glColor3f(0.6, 0.6, 0.6);	// Dim the ground texture a bit
+
+	glEnable(GL_TEXTURE_2D);	// Enable 2D texturing
+
+	glBindTexture(GL_TEXTURE_2D, tex_ground.texture[0]);	// Bind the ground texture
+
+	glPushMatrix();
+	glBegin(GL_QUADS);
+	glNormal3f(0, 1, 0);	// Set quad normal direction.
+	glTexCoord2f(0, 0);		// Set tex coordinates ( Using (0,0) -> (5,5) with texture wrapping set to GL_REPEAT to simulate the ground repeated grass texture).
+	glVertex3f(-20, 0, -20);
+	glTexCoord2f(5, 0);
+	glVertex3f(20, 0, -20);
+	glTexCoord2f(5, 5);
+	glVertex3f(20, 0, 20);
+	glTexCoord2f(0, 5);
+	glVertex3f(-20, 0, 20);
+	glEnd();
+	glPopMatrix();
+
+	glEnable(GL_LIGHTING);	// Enable lighting again for other entites coming throung the pipeline.
+
+	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
+}
+
+void CalculateMinionPosition() {
+    float bridgeHeight = 13.0f; // Example height of the bridge
+    float bridgeLength = 200.0f; // Example length of the bridge
+    float relativePosition = (minionPositionZ - bridgePositionZ) / bridgeLength;
+    //minionPositionY = bridgeHeight * sin(relativePosition * 3.14159f); 
+}
+
+void RenderMinion() {
+   
+    CalculateMinionPosition();
+
+    glPushMatrix();
+	glTranslatef(3.0, minionPositionY, minionPositionZ);
+    glScalef(0.20, 0.20, 0.20);
+    glRotatef(180, 0, 1, 0);
+    model_minion.Draw();
+    glPopMatrix();
+}
+
+void RenderSky() {
+	glPushMatrix();
+
+	GLUquadricObj* qobj;
+	qobj = gluNewQuadric();
+	glTranslated(50, 0, 0);
+	glRotated(90, 1, 0, 1);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	gluQuadricTexture(qobj, true);
+	gluQuadricNormals(qobj, GL_SMOOTH);
+	gluSphere(qobj, 100, 100, 100);
+	gluDeleteQuadric(qobj);
+
+
+	glPopMatrix();
+
+}
+
+void RenderBridge() {
+	glPushMatrix();
+	glTranslatef(70.0f, 0.0f, bridgePositionZ);
+	glScalef(4.0f, 4.0f, 4.0f);
+	glRotatef(90, 0, 1, 0);
+	model_bridge.Draw();
+	glPopMatrix();
+}
+
+void RenderBanana() {
+	glPushMatrix();
+	glTranslatef(3.0f, 11.0f, bananaPositionZ - 10.0f);
+	glRotatef(90, 0, 1, 0);
+	glScalef(1.0f, 1.0f, 1.0f);
+	model_banana.Draw();
+	glPopMatrix();
+}
+
+void RenderSandbags() {
+	glPushMatrix();
+	glTranslatef(1.0f, 10.0f, 40.0f);
+	glRotatef(90, 0, 1, 0);
+	glScalef(1.0f, 1.0f, 1.0f);
+	model_sandbags.Draw();
+	glPopMatrix();
+}
+
+//=======================================================================
+// Display Function
+//=======================================================================
+void Display(void)
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Update the camera view based on the current mode
+	glLoadIdentity();
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+
+	// Lighting setup
+	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
+	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
+
+	// Render the scene
+	RenderGround();
+	RenderMinion();
+	RenderSky();
+	RenderBridge();
+	RenderBanana();
+
+	glutSwapBuffers();
+}
+
+// Keyboard Function
+void Keyboard(unsigned char button, int x, int y)
+{
+	switch (button)
+	{
+	case 27: //esc
+		exit(0);
+		break;
+
+	case 'w': //toggle view perspectives
+		isThirdPerson = !isThirdPerson;
+
+		if (isThirdPerson) {
+			Eye = Vector(3, 12, 50);
+			At = Vector(0, 0, 0);
+		}
+		else {
+			Eye = Vector(3, 12, 45);
+			At = Vector(0, 2, -10); // look forward
+		}
+		break;
+
+	default:
+		break;
+	}
+
+	glLoadIdentity();
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+}
+
+// Motion Function
+void Motion(int x, int y)
+{
+	y = HEIGHT - y;
+
+	if (cameraZoom - y > 0)
+	{
+		Eye.x += -0.1;
+		Eye.z += -0.1;
+	}
+	else
+	{
+		Eye.x += 0.1;
+		Eye.z += 0.1;
+	}
+
+	cameraZoom = y;
+
+	glLoadIdentity();	//Clear Model_View Matrix
+
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);	//Setup Camera with modified paramters
+
+	GLfloat light_position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
+	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
+}
+
+// Mouse Function
+void Mouse(int button, int state, int x, int y)
+{
+	y = HEIGHT - y;
+
+	if (state == GLUT_DOWN)
+	{
+		cameraZoom = y;
+	}
+}
+
+// Reshape Function
+void Reshape(int w, int h)
+{
+	if (h == 0) {
+		h = 1;
+	}
+
+	WIDTH = w;
+	HEIGHT = h;
+
+	// set the drawable region of the window
+	glViewport(0, 0, w, h);
+
+	// set up the projection matrix 
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	gluPerspective(fovy, (GLdouble)WIDTH / (GLdouble)HEIGHT, zNear, zFar);
+
+	// go back to modelview matrix so we can move the objects about
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+}
+
+// Assets Loading Function
+void LoadAssets()
+{
+	// Loading Model files
+	model_minion.Load("Models/minion/minion.3ds");
+	model_finishLine.Load("Models/gate/gate.3ds");
+	model_bridge.Load("Models/bridge/bridge.3ds");
+	model_banana.Load("Models/banana/banana.3ds");
+	model_sandbags.Load("Models/sandbags/sandbags.3ds");
+
+	// Loading texture files
+	tex_ground.Load("Textures/ground.bmp");
+	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
+
+}
+
+// OpengGL Configuration Function
+void init(void)
+{
+	LoadAssets();
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+	glEnable(GL_NORMALIZE);
+	glEnable(GL_COLOR_MATERIAL);
+
+	glShadeModel(GL_SMOOTH);
+
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 
 	glMatrixMode(GL_PROJECTION);
@@ -142,260 +385,7 @@ void myInit(void)
 	glEnable(GL_NORMALIZE);
 }
 
-//=======================================================================
-// Render Ground Function
-//=======================================================================
-void RenderGround()
-{
-	glDisable(GL_LIGHTING);	// Disable lighting 
-
-	glColor3f(0.6, 0.6, 0.6);	// Dim the ground texture a bit
-
-	glEnable(GL_TEXTURE_2D);	// Enable 2D texturing
-
-	glBindTexture(GL_TEXTURE_2D, tex_ground.texture[0]);	// Bind the ground texture
-
-	glPushMatrix();
-	glBegin(GL_QUADS);
-	glNormal3f(0, 1, 0);	// Set quad normal direction.
-	glTexCoord2f(0, 0);		// Set tex coordinates ( Using (0,0) -> (5,5) with texture wrapping set to GL_REPEAT to simulate the ground repeated grass texture).
-	glVertex3f(-20, 0, -20);
-	glTexCoord2f(5, 0);
-	glVertex3f(20, 0, -20);
-	glTexCoord2f(5, 5);
-	glVertex3f(20, 0, 20);
-	glTexCoord2f(0, 5);
-	glVertex3f(-20, 0, 20);
-	glEnd();
-	glPopMatrix();
-
-	glEnable(GL_LIGHTING);	// Enable lighting again for other entites coming throung the pipeline.
-
-	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
-}
-
-void RenderPlayer() {
-	glPushMatrix();
-	glTranslatef(3.0, 11.0, 60.0);
-	glScalef(0.20, 0.20, 0.20);
-	glRotatef(180, 0, 1, 0);
-	model_minion.Draw();
-	glPopMatrix();
-}
-
-void RenderSky() {
-	glPushMatrix();
-
-	GLUquadricObj* qobj;
-	qobj = gluNewQuadric();
-	glTranslated(50, 0, 0);
-	glRotated(90, 1, 0, 1);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	gluQuadricTexture(qobj, true);
-	gluQuadricNormals(qobj, GL_SMOOTH);
-	gluSphere(qobj, 100, 100, 100);
-	gluDeleteQuadric(qobj);
-
-
-	glPopMatrix();
-
-}
-
-void RenderBridge() {
-	glPushMatrix();
-	glTranslatef(70.0f, 0.0f, bridgePositionZ - 10.0f);
-	glScalef(4.0f, 4.0f, 4.0f);
-	glRotatef(90, 0, 1, 0);
-	model_bridge.Draw();
-	glPopMatrix();
-}
-
-void RenderBanana() {
-	glPushMatrix();
-	glTranslatef(3.0f, 11.0f, bananaPositionZ - 10.0f);
-	glRotatef(90, 0, 1, 0);
-	glScalef(1.0f, 1.0f, 1.0f);
-	model_banana.Draw();
-	glPopMatrix();
-}
-
-void RenderSandbags() {
-	glPushMatrix();
-	glTranslatef(1.0f, 10.0f, 40.0f);
-	glRotatef(90, 0, 1, 0);
-	glScalef(1.0f, 1.0f, 1.0f);
-	model_sandbags.Draw();
-	glPopMatrix();
-}
-
-
-
-void UpdatePositions() {
-	bridgePositionZ += bridgeSpeed;
-	if (bridgePositionZ < -50.0f) {
-		bridgePositionZ = 0.0f;
-	}
-}
-
-
-//=======================================================================
-// Display Function
-//=======================================================================
-void Display(void)
-{
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// Update the camera view based on the current mode
-	glLoadIdentity();
-	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
-
-	// Lighting setup
-	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
-	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f };
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
-
-	// Render the scene
-	RenderGround();
-	RenderPlayer();
-	RenderSky();
-	RenderBridge();
-	RenderBanana();
-	UpdatePositions();
-
-
-	glutSwapBuffers();
-}
-void Idle() {
-	bananaPositionZ += 0.005;
-	glutPostRedisplay(); // Continuously trigger the display function
-}
-
-
-//=======================================================================
-// Keyboard Function
-//=======================================================================
-void Keyboard(unsigned char button, int x, int y)
-{
-	switch (button)
-	{
-	case 27: //esc
-		exit(0);
-		break;
-
-	case 'w': //toggle view perspectives
-		isThirdPerson = !isThirdPerson;
-
-		if (isThirdPerson) {
-			Eye = Vector(3, 12, 50);
-			At = Vector(0, 0, 0);
-		}
-		else {
-			Eye = Vector(3, 12, 45);
-			At = Vector(0, 2, -10); // look forward
-		}
-		break;
-
-	default:
-		break;
-	}
-
-	glLoadIdentity();
-	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
-	glutPostRedisplay();
-}
-
-
-//=======================================================================
-// Motion Function
-//=======================================================================
-void Motion(int x, int y)
-{
-	y = HEIGHT - y;
-
-	if (cameraZoom - y > 0)
-	{
-		Eye.x += -0.1;
-		Eye.z += -0.1;
-	}
-	else
-	{
-		Eye.x += 0.1;
-		Eye.z += 0.1;
-	}
-
-	cameraZoom = y;
-
-	glLoadIdentity();	//Clear Model_View Matrix
-
-	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);	//Setup Camera with modified paramters
-
-	GLfloat light_position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
-	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
-
-	glutPostRedisplay();	//Re-draw scene 
-}
-
-//=======================================================================
-// Mouse Function
-//=======================================================================
-void Mouse(int button, int state, int x, int y)
-{
-	y = HEIGHT - y;
-
-	if (state == GLUT_DOWN)
-	{
-		cameraZoom = y;
-	}
-}
-
-//=======================================================================
-// Reshape Function
-//=======================================================================
-void Reshape(int w, int h)
-{
-	if (h == 0) {
-		h = 1;
-	}
-
-	WIDTH = w;
-	HEIGHT = h;
-
-	// set the drawable region of the window
-	glViewport(0, 0, w, h);
-
-	// set up the projection matrix 
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(fovy, (GLdouble)WIDTH / (GLdouble)HEIGHT, zNear, zFar);
-
-	// go back to modelview matrix so we can move the objects about
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
-}
-
-//=======================================================================
-// Assets Loading Function
-//=======================================================================
-void LoadAssets()
-{
-	// Loading Model files
-	model_minion.Load("Models/minion/minion.3ds");
-	model_finishLine.Load("Models/gate/gate.3ds");
-	model_bridge.Load("Models/bridge/bridge.3ds");
-	model_banana.Load("Models/banana/banana.3ds");
-	model_sandbags.Load("Models/sandbags/sandbags.3ds");
-
-	// Loading texture files
-	tex_ground.Load("Textures/ground.bmp");
-	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
-
-}
-
-//=======================================================================
 // Main Function
-//=======================================================================
 void main(int argc, char** argv)
 {
 	glutInit(&argc, argv);
@@ -413,17 +403,12 @@ void main(int argc, char** argv)
 	glutMotionFunc(Motion);
 	glutMouseFunc(Mouse);
 	glutReshapeFunc(Reshape);
-	glutIdleFunc(Idle);
+	glutIdleFunc(Display);
 
-	myInit();
-	LoadAssets();
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_NORMALIZE);
-	glEnable(GL_COLOR_MATERIAL);
+	init();
 
-	glShadeModel(GL_SMOOTH);
+	// Start the timer for 2 minutes 
+    //glutTimerFunc(16, TimerCallback, 120000 / 16);
 
 	glutMainLoop();
 }
