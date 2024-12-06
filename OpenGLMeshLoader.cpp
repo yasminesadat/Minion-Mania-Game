@@ -146,10 +146,10 @@ void InitSound() {
 	winSound = Mix_LoadWAV("sounds/win.mp3");
 	loseSound = Mix_LoadWAV("sounds/loss.mp3");
 
-	if (coinSound == nullptr || background1Sound == nullptr || bananaSound == nullptr 
+	if (coinSound == nullptr || background1Sound == nullptr || bananaSound == nullptr
 		|| logSound == nullptr || sandbagSound == nullptr || winSound == nullptr
 		|| loseSound == nullptr || barrierSound == nullptr || background2Sound == nullptr) {
-		printf_s("Failed to load sound effect! SDL_mixer Error: %s",Mix_GetError());
+		printf_s("Failed to load sound effect! SDL_mixer Error: %s", Mix_GetError());
 		exit(-1);
 	}
 
@@ -220,18 +220,12 @@ float jumpForce = sqrt(2 * -gravity * desiredJumpHeight);
 float jumpForce2 = sqrt(2 * -gravity2 * desiredJumpHeight2);
 
 bool isRebounding = false;
-float reboundVelocity = 0.0f;
-float reboundDistance = 0.0f;
-const float reboundInitialVelocity = 0.4f;
-const float reboundDeceleration = -0.008f;
+float reboundDuration = 0.6f;
+float reboundStartTime = 0.0f;
+const float reboundDeceleration = SPEED2 * 1.5;
 
 float dayNightTransition = 1.0f; // 1.0 = full day, 0.0 = full night
-float initialZ = 60.0f;			 // Starting Z position
-float transitionEndZ = -80.0f;	 // End Z position (portal position)
 float transitionDuration = 30.0f;
-float glitchUpdateInterval = 0.05f; // How often the glitch position updates
-float lastGlitchUpdate = 0.0f;
-float glitchIntensity = 0.3f; // Maximum distance of glitch displacement
 
 // Banana Variables
 float bananaPositionZ = 0.0f;
@@ -247,7 +241,7 @@ float start = remainingTime;
 bool isGlitching = false;
 float glitchDuration = 1.0f;
 float glitchStartTime = 0.0f;
-float glitchdeceleration = SPEED * 1.5;
+float glitchDeceleration = SPEED * 1.5;
 
 int score = 0;
 bool firstLevel = true;
@@ -412,19 +406,6 @@ void InitializeForest()
 	}
 }
 
-void UpdateGlitchEffect()
-{
-	if (isGlitching)
-	{
-		float currentTime = remainingTime;
-		if (currentTime - lastGlitchUpdate >= glitchUpdateInterval)
-		{
-			// Generate random offsets
-			lastGlitchUpdate = currentTime;
-		}
-	}
-}
-
 // =================================  RENDERS  ================================= //
 void RenderGround()
 {
@@ -546,14 +527,19 @@ void CalculateMinionPosition()
 			minionPositionZ = minionPositionZ - SPEED * elapsedTime;
 		}
 		else {
-			minionPositionZ = minionPositionZ - SPEED * elapsedTime + glitchdeceleration*elapsedTime;
+			minionPositionZ = minionPositionZ - SPEED * elapsedTime + glitchDeceleration * elapsedTime;
 		}
 
 		minionPositionY = CalculateMinionHeight();
 	}
 	else
 	{
-		minionPositionZ2 = minionPositionZ2 - SPEED2 * elapsedTime;
+		if (!isRebounding) {
+			minionPositionZ2 = minionPositionZ2 - SPEED2 * elapsedTime;
+		}
+		else {
+			minionPositionZ2 = minionPositionZ2 - SPEED2 * elapsedTime + reboundDeceleration * elapsedTime;
+		}
 		minionPositionY2 = 1.3f;
 		if (!isThirdPerson)
 		{
@@ -579,7 +565,7 @@ bool CheckCollision(const Vector& minionPos, const Obstacle& obstacle)
 
 bool CheckSandbagCollision(const Vector& minionPos, const Obstacle& sandbag)
 {
-	if (!isGlitching)
+	if (!isRebounding)
 	{
 		float collisionThreshold = 0.5f;
 		return (
@@ -634,31 +620,10 @@ void HandleCollision()
 			glitchStartTime = remainingTime;
 		}
 	}
-}
-
-void HandleSandbagRebound()
-{
-	if (isRebounding)
-	{
-		// Update rebound motion
-		reboundDistance += reboundVelocity;
-		reboundVelocity += reboundDeceleration;
-
-		// Apply rebound movement
-		minionPositionZ2 += reboundVelocity;
-		Eye.z += reboundVelocity;
-
-		// Check if rebound is complete
-		if (reboundVelocity <= 0)
-		{
-			isRebounding = false;
-			reboundVelocity = 0.0f;
-			reboundDistance = 0.0f;
-			remainingTime -= 2.0f;
-		}
-
-		if (remainingTime <= 0) {
-			gameLoseLevelOne = true;
+	if (!isRebounding) {
+		if (!firstLevel) {
+			isRebounding = true;
+			reboundStartTime = remainingTime;
 		}
 	}
 }
@@ -673,7 +638,7 @@ bool CheckLogCollision(const Vector& minionPos, const Vector& obstacle)
 
 void BananaCollision()
 {
-	if (!isGlitching)
+	if (!isRebounding)
 	{
 
 		for (auto it = bananas.begin(); it != bananas.end();)
@@ -766,7 +731,6 @@ void RenderMinion()
 			isGlitching = false;
 			remainingTime -= 2;
 		}
-		UpdateGlitchEffect();
 
 		if (remainingTime <= 0) {
 			gameLose = true;
@@ -775,7 +739,7 @@ void RenderMinion()
 
 	// Single draw call for the minion with or without glitch effect
 	glPushMatrix();
-	glTranslatef(minionPositionX, minionPositionY, minionPositionZ );
+	glTranslatef(minionPositionX, minionPositionY, minionPositionZ);
 	glScalef(0.20, 0.20, 0.20);
 	glRotatef(180, 0, 1, 0);
 
@@ -822,9 +786,6 @@ void RenderMinionSecond()
 		}
 	}
 
-	// Handle rebound physics
-	HandleSandbagRebound();
-
 	// obstacle collision
 	for (const auto& sandbag : sandbags)
 	{
@@ -832,14 +793,18 @@ void RenderMinionSecond()
 		{
 			Mix_PlayChannel(-1, sandbagSound, 0);
 			HandleCollision();
-			// Instead of instant position change, initiate rebound
-			if (!isRebounding)
-			{
-				isRebounding = true;
-				reboundVelocity = reboundInitialVelocity;
-				reboundDistance = 0.0f;
-			}
-			break;
+		}
+	}
+
+	if (isRebounding) {
+		float elapsedTime = reboundStartTime - remainingTime;
+		if (elapsedTime >= reboundDuration) {
+			isRebounding = false;
+			remainingTime -= 2;
+		}
+
+		if (remainingTime <= 0) {
+			gameLose = true;
 		}
 	}
 
@@ -897,8 +862,8 @@ void UpdateLighting()
 		// Clamp values between 0 and 1
 		if (dayNightTransition > 1.0f)
 			dayNightTransition = 1.0f;
-		if (dayNightTransition < 0.0f)
-			dayNightTransition = 0.0f;
+		if (dayNightTransition < 0.2f)
+			dayNightTransition = 0.2f;
 
 		// Update light properties based on time of day
 		GLfloat sunIntensity = dayNightTransition;
@@ -944,12 +909,12 @@ void RenderSky()
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
+		glColor4f(1.0f, 1.0f, 1.0f, dayNightTransition);
 		// Render day sky with fading alpha
 		glBindTexture(GL_TEXTURE_2D, daytex);
 		gluQuadricTexture(qobj, true);
 		gluQuadricNormals(qobj, GL_SMOOTH);
 		gluSphere(qobj, 100, 100, 100);
-		glColor4f(1.0f, 1.0f, 1.0f, dayNightTransition);
 		gluQuadricTexture(qobj, true);
 		gluQuadricNormals(qobj, GL_SMOOTH);
 		gluSphere(qobj, 100, 100, 100);
@@ -1249,7 +1214,7 @@ void RenderGameOverScreen()
 			Mix_PlayChannel(-1, loseSound, 0);
 			playLose = true;
 		}
-		RenderText(xCenter-30, yCenter, "Game Over! You lost");
+		RenderText(xCenter - 30, yCenter, "Game Over! You lost");
 	}
 	else
 	{
@@ -1258,11 +1223,11 @@ void RenderGameOverScreen()
 			playWin = true;
 		}
 		glColor3f(0.0f, 1.0f, 0.0f); // Red color for text
-		RenderText(xCenter+20, yCenter, "Game Win!");
+		RenderText(xCenter + 20, yCenter, "Game Win!");
 	}
 	char scoreText[50];
 	sprintf_s(scoreText, "Your score is %d", score);
-	RenderText(xCenter-10, yCenter-50, scoreText);
+	RenderText(xCenter - 10, yCenter - 50, scoreText);
 	// Restore matrices
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
@@ -1281,7 +1246,7 @@ void MoveCamera()
 	{
 		Eye.z -= SPEED * elapsedTime;
 		if (isGlitching) {
-			Eye.z += glitchdeceleration * elapsedTime;
+			Eye.z += glitchDeceleration * elapsedTime;
 		}
 		At.z -= SPEED * elapsedTime;
 
@@ -1291,6 +1256,11 @@ void MoveCamera()
 	{
 
 		Eye.z -= SPEED2 * elapsedTime;
+
+		if (isRebounding) {
+			Eye.z += reboundDeceleration * elapsedTime;
+		}
+
 		At.z -= SPEED2 * elapsedTime;
 
 		gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
@@ -1333,6 +1303,7 @@ void Display(void)
 	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
+
 	if (gameLoseLevelOne || gameLose || gameWin)
 	{
 		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -1383,7 +1354,7 @@ void Display(void)
 	glutPostRedisplay();
 }
 
-void handleViewChange(){
+void handleViewChange() {
 	if (firstLevel) {
 		if (isThirdPerson) {
 			Eye = Vector(2.4, Eye.y, Eye.z + 6.4);
@@ -1396,11 +1367,11 @@ void handleViewChange(){
 	}
 	else {
 		if (isThirdPerson) {
-			Eye = Vector(0, Eye.y + 1.0, Eye.z + 9.5);
+			Eye = Vector(0, Eye.y + 1.0, Eye.z + 9.3);
 			At = Vector(0, 0, At.z);
 		}
 		else {
-			Eye = Vector(minionPositionX2, Eye.y - 1.0, Eye.z - 9.5);
+			Eye = Vector(minionPositionX2, Eye.y - 1.0, Eye.z - 9.3);
 			At = Vector(0, 0, At.z); // look forward
 		}
 	}
