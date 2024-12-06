@@ -144,8 +144,9 @@ void InitSound() {
 	// Load all sounds
 	coinSound = Mix_LoadWAV("sounds/coin.wav");
 	background1Sound = Mix_LoadMUS("sounds/background1.mp3");
+	bananaSound = Mix_LoadWAV("sounds/minion_yay.mp3");
 
-	if (coinSound == nullptr || background1Sound == nullptr) {
+	if (coinSound == nullptr || background1Sound == nullptr || bananaSound == nullptr) {
 		printf_s("Failed to load sound effect! SDL_mixer Error: %s",Mix_GetError());
 		exit(-1);
 	}
@@ -677,6 +678,7 @@ void BananaCollision()
 			if (isWithinXRange && isWithinZRange && isWithinYRange)
 			{
 				it = bananas.erase(it);
+				Mix_PlayChannel(-1, bananaSound, 0);
 				score++;
 			}
 			else
