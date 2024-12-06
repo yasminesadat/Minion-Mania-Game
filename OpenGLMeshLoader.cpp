@@ -1407,6 +1407,31 @@ void Display(void)
 	glutPostRedisplay();
 }
 
+void handleViewChange(){
+	if (firstLevel) {
+		if (isThirdPerson) {
+			Eye = Vector(2.4, Eye.y, Eye.z + 6.4);
+			At = Vector(0, 0, At.z + 3);
+		}
+		else {
+			Eye = Vector(minionPositionX, Eye.y, Eye.z - 6.4);
+			At = Vector(0, 0, At.z - 3); // look forward
+		}
+	}
+	else {
+		if (isThirdPerson) {
+			Eye = Vector(0, Eye.y + 1.0, Eye.z + 9.5);
+			At = Vector(0, 0, At.z);
+		}
+		else {
+			Eye = Vector(minionPositionX2, Eye.y - 1.0, Eye.z - 9.5);
+			At = Vector(0, 0, At.z); // look forward
+		}
+	}
+	glLoadIdentity();
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+}
+
 // Keyboard Function
 void Keyboard(unsigned char button, int x, int y)
 {
@@ -1415,7 +1440,18 @@ void Keyboard(unsigned char button, int x, int y)
 	case 27: // esc
 		exit(0);
 		break;
-
+	case 'f':
+		if (isThirdPerson) {
+			isThirdPerson = false;
+			handleViewChange();
+		}
+		break;
+	case 't':
+		if (!isThirdPerson) {
+			isThirdPerson = true;
+			handleViewChange();
+		}
+		break;
 	default:
 		break;
 	}
@@ -1496,28 +1532,7 @@ void SpecialKeyboard(int key, int x, int y)
 void MouseFunc(int button, int state, int x, int y) {
 	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
 		isThirdPerson = !isThirdPerson;
-		if (firstLevel) {
-			if (isThirdPerson) {
-				Eye = Vector(2.4, Eye.y, Eye.z + 6.4);
-				At = Vector(0, 0, At.z + 3);
-			}
-			else {
-				Eye = Vector(minionPositionX, Eye.y, Eye.z - 6.4);
-				At = Vector(0, 0, At.z - 3); // look forward
-			}
-		}
-		else {
-			if (isThirdPerson) {
-				Eye = Vector(0, Eye.y + 1.0, Eye.z + 9.5);
-				At = Vector(0, 0, At.z);
-			}
-			else {
-				Eye = Vector(minionPositionX2, Eye.y - 1.0, Eye.z - 9.5);
-				At = Vector(0, 0, At.z); // look forward
-			}
-		}
-		glLoadIdentity();
-		gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+		handleViewChange();
 	}
 }
 
