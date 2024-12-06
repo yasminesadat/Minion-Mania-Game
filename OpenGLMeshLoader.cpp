@@ -145,7 +145,7 @@ int cameraZoom = 0;
 
 // =================================  GAME VARIABLES  ================================= //
 float SPEED = 0.0015f;
-float SPEED2 = 0.004f;
+float SPEED2 = 0.005f;
 
 // Store the start time
 std::clock_t startTime = std::clock();
@@ -169,7 +169,7 @@ float minionEndY = 11.5f;
 bool isJumping = false;
 float jumpVelocity = 0.0f;
 const float gravity = -0.00025f;
-const float gravity2 = -0.008f;
+const float gravity2 = -0.009f;
 const float desiredJumpHeight = 2.2f;
 const float desiredJumpHeight2 = 1.8f;
 float jumpOffset = 0.0f;
@@ -565,7 +565,7 @@ void CheckFinishLineCollision()
 
 	if (minionPositionZ2 <= -45.0f)
 	{
-		if (score >= 8)
+		if (score >= 18)
 		{
 			gameWin = true;
 		}
@@ -1066,7 +1066,6 @@ void ResetLevel()
 	Up = Vector(0, 1, 0);
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
-	score = 0;
 	remainingTime = start;
 	elapsedTime = 0.0f;
 	doneReset = true;
@@ -1082,7 +1081,7 @@ void RenderTimer()
 	gluOrtho2D(0, WIDTH, 0, HEIGHT);
 	glMatrixMode(GL_MODELVIEW);
 	glColor3f(0.0f, 0.0f, 0.0f);			 // Set the text color to black
-	glRasterPos2i(WIDTH - 110, HEIGHT - 25); // Position the text
+	glRasterPos2i(WIDTH - 106, HEIGHT - 25); // Position the text
 	char timerText[50];
 	sprintf_s(timerText, "Time: %.1f s", remainingTime);
 	for (char* c = timerText; *c != '\0'; c++)
@@ -1193,7 +1192,9 @@ void RenderGameOverScreen()
 		glColor3f(0.0f, 1.0f, 0.0f); // Red color for text
 		RenderText(xCenter, yCenter, "Game Win!");
 	}
-
+	char scoreText[50];
+	sprintf_s(scoreText, "Your score is %d", score);
+	RenderText(xCenter-10, yCenter-50, scoreText);
 	// Restore matrices
 	glPopMatrix();
 	glMatrixMode(GL_PROJECTION);
