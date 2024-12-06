@@ -198,7 +198,7 @@ int cameraZoom = 0;
 
 // =================================  GAME VARIABLES  ================================= //
 float SPEED = 0.0015f;
-float SPEED2 = 0.006f;
+float SPEED2 = 0.0055f;
 
 // Store the start time
 std::clock_t startTime = std::clock();
@@ -250,7 +250,7 @@ float bananaPositionZ = 0.0f;
 float bridgePositionZ = -10.0f;
 
 // Timer Variables
-float remainingTime = 30.0f;
+float remainingTime = 25.0f;
 float start = remainingTime;
 
 // for the obstacle collision in level 1 - glitch effect
@@ -668,7 +668,7 @@ void HandleSandbagRebound()
 		}
 
 		if (remainingTime <= 0) {
-			gameLose = true;
+			gameLoseLevelOne = true;
 		}
 	}
 }
@@ -774,8 +774,13 @@ void RenderMinion()
 		float elapsedTime = glitchStartTime - remainingTime;
 		if (elapsedTime >= glitchDuration) {
 			isGlitching = false;
+			remainingTime -= 2;
 		}
 		UpdateGlitchEffect();
+
+		if (remainingTime <= 0) {
+			gameLose = true;
+		}
 	}
 
 	// Single draw call for the minion with or without glitch effect
@@ -1245,7 +1250,7 @@ void RenderGameOverScreen()
 
 	glColor3f(1.0f, 0.0f, 0.0f); // Red color for text
 	Mix_HaltMusic();
-	Mix_VolumeMusic(20);
+	Mix_VolumeMusic(15);
 	if (gameLoseLevelOne)
 	{
 		if (!playLose) {
@@ -1260,7 +1265,7 @@ void RenderGameOverScreen()
 			Mix_PlayChannel(-1, loseSound, 0);
 			playLose = true;
 		}
-		RenderText(xCenter, yCenter, "Game Over! You lost");
+		RenderText(xCenter-30, yCenter, "Game Over! You lost");
 	}
 	else
 	{
@@ -1269,7 +1274,7 @@ void RenderGameOverScreen()
 			playWin = true;
 		}
 		glColor3f(0.0f, 1.0f, 0.0f); // Red color for text
-		RenderText(xCenter, yCenter, "Game Win!");
+		RenderText(xCenter+25, yCenter, "Game Win!");
 	}
 	char scoreText[50];
 	sprintf_s(scoreText, "Your score is %d", score);
