@@ -54,16 +54,6 @@ Mix_Chunk* loseSound;
 bool playWin = false;
 bool playLose = false;
 
-GLfloat sunLightPosition[] = { 0.0f, 10.0f, 0.0f, 1.0f }; // Sun position
-GLfloat sunAmbient[] = { 0.1f, 0.1f, 0.1f, 1.0f };		// Ambient light
-GLfloat sunDiffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };		// Diffuse light
-GLfloat sunSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };		// Specular light
-
-GLfloat flashlightPosition[] = { 0.0f, 2.0f, 0.0f, 1.0f }; // Initial position of the flashlight
-GLfloat flashlightAmbient[] = { 0.1f, 0.1f, 0.1f, 1.0f };	 // Ambient light for flashlight
-GLfloat flashlightDiffuse[] = { 1.0f, 1.0f, 0.8f, 1.0f };	 // Diffuse light for flashlight
-GLfloat flashlightSpecular[] = { 1.0f, 1.0f, 0.8f, 1.0f };
-
 // Assets Loading Function
 void LoadAssets()
 {
@@ -964,12 +954,6 @@ void RenderSky()
 		gluQuadricNormals(qobj, GL_SMOOTH);
 		gluSphere(qobj, 100, 100, 100);
 
-		//// Render night sky with increasing alpha
-		glBindTexture(GL_TEXTURE_2D, nighttex);
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f - dayNightTransition);
-		gluQuadricTexture(qobj, true);
-		gluSphere(qobj, 100, 100, 100);
-
 		glDisable(GL_BLEND);
 	}
 	else
@@ -1274,7 +1258,7 @@ void RenderGameOverScreen()
 			playWin = true;
 		}
 		glColor3f(0.0f, 1.0f, 0.0f); // Red color for text
-		RenderText(xCenter+25, yCenter, "Game Win!");
+		RenderText(xCenter+20, yCenter, "Game Win!");
 	}
 	char scoreText[50];
 	sprintf_s(scoreText, "Your score is %d", score);
@@ -1331,14 +1315,6 @@ void UpdateCamera()
 
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
-}
-
-void UpdateFlashlightPosition()
-{
-	// Assuming minionPositionX2, minionPositionY2, and minionPositionZ2 are the minion's coordinates
-	flashlightPosition[0] = minionPositionX2;		 // X position based on minion
-	flashlightPosition[1] = minionPositionY2 + 1.0f; // Slightly above the minion's height
-	flashlightPosition[2] = minionPositionZ2;		 // Z position based on minion
 }
 
 // Display Function
