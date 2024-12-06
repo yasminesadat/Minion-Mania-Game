@@ -5,6 +5,8 @@
 #include <ctime>
 #include <glut.h>
 #include <cmath>
+#include <SDL.h>
+#include <SDL_mixer.h>
 
 // =================================  CONFIGURATIONS ================================= //
 int WIDTH = glutGet(GLUT_SCREEN_WIDTH);
@@ -37,6 +39,16 @@ Model_3DS model_lamp;
 
 // Textures
 GLTexture tex_ground;
+
+// Sounds
+Mix_Music* background1Sound;
+Mix_Music* background2Sound;
+Mix_Chunk* coinSound;
+Mix_Chunk* bananaSound;
+Mix_Chunk* logSound;
+Mix_Chunk* barrierSound;
+Mix_Chunk* winSound;
+Mix_Chunk* loseSound;
 
 GLfloat sunLightPosition[] = { 0.0f, 10.0f, 0.0f, 1.0f }; // Sun position
 GLfloat sunAmbient[] = { 0.1f, 0.1f, 0.1f, 1.0f };		// Ambient light
@@ -116,6 +128,34 @@ void InitMaterial()
 	// Set Material's Shine value (0->128)
 	GLfloat shininess[] = { 96.0f };
 	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+}
+
+void InitSound() {
+	if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+		printf_s("SDL could not initialize! SDL_Error: %s", Mix_GetError());
+		exit(-1);
+	}
+
+	if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+		printf_s("SDL_mixer could not initialize! SDL_mixer Error: %s", Mix_GetError());
+		exit(-1);
+	}
+
+	// Load all sounds
+	coinSound = Mix_LoadWAV("sounds/coin.wav");
+	background1Sound = Mix_LoadMUS("sounds/background1.mp3");
+
+	if (coinSound == nullptr || background1Sound == nullptr) {
+		printf_s("Failed to load sound effect! SDL_mixer Error: %s",Mix_GetError());
+		exit(-1);
+	}
+
+}
+
+void CleanUp() {
+	Mix_FreeChunk(coinSound);
+	Mix_CloseAudio();
+	SDL_Quit();
 }
 
 // =================================  CAMERA CONFIG  ================================= //
@@ -661,6 +701,7 @@ void CoinCollision()
 			if (isWithinXRange && isWithinZRange && isWithinYRange)
 			{
 				it = coins.erase(it);
+				Mix_PlayChannel(-1, coinSound, 0);
 				score++;
 			}
 			else
@@ -1503,6 +1544,7 @@ void Reshape(int w, int h)
 void init(void)
 {
 	LoadAssets();
+	InitSound();
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_LIGHTING);
 	glEnable(GL_LIGHT0);
@@ -1565,7 +1607,7 @@ void Render(int value)
 }
 
 // Main Function
-void main(int argc, char** argv)
+int main(int argc, char** argv)
 {
 	glutInit(&argc, argv);
 
@@ -1587,5 +1629,10 @@ void main(int argc, char** argv)
 	init();
 
 	glutTimerFunc(16, Render, 0);
+
+	Mix_VolumeMusic(30);
+	Mix_PlayMusic(background1Sound, -1);
+
 	glutMainLoop();
+	return 0;
 }
