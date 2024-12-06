@@ -45,16 +45,19 @@ The game offers:
 
 ---
 
+## 📷 Screenshots
+![Cityscape Level](1.png)
+![Portal](2.png)
+![Forest Level](3.png)
+
+---
+
 ## 🎮 Controls  
 
 | Action            | Control          |  
 |-------------------|------------------|  
 | Move and Jump     | Keyboard arrows  |   
-| Switch Camera     | Mouse or 'f'/'t' |  
-
-
-## 📷 Screenshots
-
+| Switch Camera     | Mouse Click or 'f'/'t' on the Keyboard|  
 
 ---
 
