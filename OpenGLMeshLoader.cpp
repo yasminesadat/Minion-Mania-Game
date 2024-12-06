@@ -47,8 +47,12 @@ Mix_Chunk* coinSound;
 Mix_Chunk* bananaSound;
 Mix_Chunk* logSound;
 Mix_Chunk* barrierSound;
+Mix_Chunk* sandbagSound;
 Mix_Chunk* winSound;
 Mix_Chunk* loseSound;
+
+bool playWin = false;
+bool playLose = false;
 
 GLfloat sunLightPosition[] = { 0.0f, 10.0f, 0.0f, 1.0f }; // Sun position
 GLfloat sunAmbient[] = { 0.1f, 0.1f, 0.1f, 1.0f };		// Ambient light
@@ -144,9 +148,17 @@ void InitSound() {
 	// Load all sounds
 	coinSound = Mix_LoadWAV("sounds/coin.wav");
 	background1Sound = Mix_LoadMUS("sounds/background1.mp3");
+	background2Sound = Mix_LoadMUS("sounds/background2.mp3");
 	bananaSound = Mix_LoadWAV("sounds/minion_yay.mp3");
+	logSound = Mix_LoadWAV("sounds/log.wav");
+	barrierSound = Mix_LoadWAV("sounds/barrier.mp3");
+	sandbagSound = Mix_LoadWAV("sounds/sad minion.mp3");
+	winSound = Mix_LoadWAV("sounds/win.mp3");
+	loseSound = Mix_LoadWAV("sounds/loss.mp3");
 
-	if (coinSound == nullptr || background1Sound == nullptr || bananaSound == nullptr) {
+	if (coinSound == nullptr || background1Sound == nullptr || bananaSound == nullptr 
+		|| logSound == nullptr || sandbagSound == nullptr || winSound == nullptr
+		|| loseSound == nullptr || barrierSound == nullptr || background2Sound == nullptr) {
 		printf_s("Failed to load sound effect! SDL_mixer Error: %s",Mix_GetError());
 		exit(-1);
 	}
@@ -186,7 +198,7 @@ int cameraZoom = 0;
 
 // =================================  GAME VARIABLES  ================================= //
 float SPEED = 0.0015f;
-float SPEED2 = 0.005f;
+float SPEED2 = 0.006f;
 
 // Store the start time
 std::clock_t startTime = std::clock();
@@ -210,7 +222,7 @@ float minionEndY = 11.5f;
 bool isJumping = false;
 float jumpVelocity = 0.0f;
 const float gravity = -0.00025f;
-const float gravity2 = -0.009f;
+const float gravity2 = -0.01f;
 const float desiredJumpHeight = 2.2f;
 const float desiredJumpHeight2 = 1.8f;
 float jumpOffset = 0.0f;
@@ -311,6 +323,7 @@ void SpawnCoins(int count)
 		coins.push_back({ x, y, z });
 	}
 }
+
 void SpawnBananas(int count)
 {
 	bananas.clear();
@@ -338,6 +351,7 @@ void SpawnObstacles(int count)
 		obstacles.push_back({ x, y[i], z });
 	}
 }
+
 void SpawnSandbags(int count)
 {
 	sandbags.clear();
@@ -366,6 +380,7 @@ void SpawnLogs(int count)
 	logs.push_back({ 4.6, 10.7, -5 });
 	logs.push_back({ 2.4, 10.2, 35 });
 }
+
 void InitializeForest()
 {
 	trees.clear();
@@ -406,6 +421,7 @@ void InitializeForest()
 		trees.push_back({ x, y, z });
 	}
 }
+
 void UpdateGlitchEffect()
 {
 	if (isGlitching)
@@ -418,7 +434,6 @@ void UpdateGlitchEffect()
 		}
 	}
 }
-// =================================  DEBUGGING  ================================= //
 
 // =================================  RENDERS  ================================= //
 void RenderGround()
@@ -571,6 +586,7 @@ bool CheckCollision(const Vector& minionPos, const Obstacle& obstacle)
 	}
 	return false;
 }
+
 bool CheckSandbagCollision(const Vector& minionPos, const Obstacle& sandbag)
 {
 	if (!isGlitching)
@@ -601,6 +617,7 @@ void CheckPortalCollision()
 		}
 	}
 }
+
 void CheckFinishLineCollision()
 {
 
@@ -688,6 +705,7 @@ void BananaCollision()
 		}
 	}
 }
+
 void CoinCollision()
 {
 	if (!isGlitching)
@@ -740,6 +758,7 @@ void RenderMinion()
 		if (CheckCollision(Vector(minionPositionX, minionPositionY, minionPositionZ), obstacle))
 		{
 			HandleCollision();
+			Mix_PlayChannel(-1, barrierSound, 0);
 			break;
 		}
 	}
@@ -748,6 +767,7 @@ void RenderMinion()
 		CheckLogCollision(Vector(minionPositionX, minionPositionY, minionPositionZ), Vector(3.6, 12, -5)))
 	{
 		HandleCollision();
+		Mix_PlayChannel(-1, logSound, 0);
 	}
 
 	if (isGlitching) {
@@ -785,7 +805,6 @@ void RenderMinion()
 	glPopMatrix();
 }
 
-
 void RenderMinionSecond()
 {
 	CalculateMinionPosition();
@@ -816,6 +835,7 @@ void RenderMinionSecond()
 	{
 		if (CheckSandbagCollision(Vector(minionPositionX2, minionPositionY2, minionPositionZ2), sandbag))
 		{
+			Mix_PlayChannel(-1, sandbagSound, 0);
 			HandleCollision();
 			// Instead of instant position change, initiate rebound
 			if (!isRebounding)
@@ -1112,6 +1132,8 @@ void ResetLevel()
 	remainingTime = start;
 	elapsedTime = 0.0f;
 	doneReset = true;
+	Mix_HaltMusic();
+	Mix_PlayMusic(background2Sound, -1);
 }
 
 void RenderTimer()
@@ -1222,16 +1244,30 @@ void RenderGameOverScreen()
 	float yCenter = HEIGHT / 2.0f;
 
 	glColor3f(1.0f, 0.0f, 0.0f); // Red color for text
+	Mix_HaltMusic();
+	Mix_VolumeMusic(20);
 	if (gameLoseLevelOne)
 	{
+		if (!playLose) {
+			Mix_PlayChannel(-1, loseSound, 0);
+			playLose = true;
+		}
 		RenderText(xCenter - 200, yCenter, "Game Over! Try again! Collect more coins to advance to level 2");
 	}
 	else if (gameLose)
 	{
-		RenderText(xCenter, yCenter, "Game Over!");
+		if (!playLose) {
+			Mix_PlayChannel(-1, loseSound, 0);
+			playLose = true;
+		}
+		RenderText(xCenter, yCenter, "Game Over! You lost");
 	}
 	else
 	{
+		if (!playWin) {
+			Mix_PlayChannel(-1, winSound, 0);
+			playWin = true;
+		}
 		glColor3f(0.0f, 1.0f, 0.0f); // Red color for text
 		RenderText(xCenter, yCenter, "Game Win!");
 	}
