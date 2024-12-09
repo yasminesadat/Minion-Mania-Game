@@ -12,7 +12,7 @@ A 3D game inspired by Minion Rush, developed using **OpenGL in C** as part of th
 
 The game offers:  
 - Collectibles like **coins** and **bananas**.  
-- Challenging obstacles such as **fallen logs**, ***barriers** and **sandbags**.  
+- Challenging obstacles such as **fallen logs**, **barriers** and **sandbags**.  
 - Dynamic lighting transitions between day and night.  
 - Two camera modes: **first-person** and **third-person** views.  
 - Interactive gameplay with real-time animations, sounds, and a score display.
