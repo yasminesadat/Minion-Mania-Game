@@ -1,6 +1,6 @@
 # Minion Mania Game 🎮  
 
-A 3D game inspired by Minion Rush, developed using **OpenGL in C** as part of the **DMET502 Computer Graphics, Winter 2024** course at the **German University in Cairo**. Guide your minion through exciting environments, collect rewards, and overcome challenges in this immersive game experience!
+This 3D game, inspired by Minion Rush, was developed using **OpenGL in C** as part of the **DMET502 Computer Graphics, Winter 2024** course at the **German University in Cairo**. Guide your minion through exciting environments, collect rewards, and overcome challenges in this immersive game experience!
 
 ---
 
